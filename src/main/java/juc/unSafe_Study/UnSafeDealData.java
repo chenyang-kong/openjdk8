@@ -17,7 +17,8 @@ public class UnSafeDealData {
         Unsafe unSafe = CreateUnSafe.createUnSafe();
         //unSafe_get_array(unSafe);
         //unSafe_deal_Object(unSafe);
-        unSafepark(unSafe);
+        //unSafepark(unSafe);
+        unSafeCas(unSafe);
     }
 
     /**UnSafe 获取数组数据*/
@@ -106,5 +107,33 @@ public class UnSafeDealData {
 
         //将会一直阻塞，无法自动醒来
         unsafe.park(false, 0);
+    }
+
+    private volatile int a;
+    public static void unSafeCas(Unsafe unsafe){
+        UnSafeDealData unSafeDealData = new UnSafeDealData();
+        new Thread(()->{
+            for(int i=1;i<=10;i++){
+                unSafeDealData.increment(i,unsafe);
+                System.out.println(unSafeDealData.a);
+            }
+        }).start();
+
+        new Thread(()->{
+            for(int i=11;i<=20;i++){
+                unSafeDealData.increment(i,unsafe);
+                System.out.println(unSafeDealData.a);
+            }
+        }).start();
+    }
+    private void increment(int x,Unsafe unsafe){
+        long offset=0;
+        do {
+            try {
+                offset = unsafe.objectFieldOffset(UnSafeDealData.class.getDeclaredField("a"));
+            } catch (NoSuchFieldException e) {
+                e.printStackTrace();
+            }
+        }while (!unsafe.compareAndSwapInt(this,offset,x-1,x));
     }
 }
